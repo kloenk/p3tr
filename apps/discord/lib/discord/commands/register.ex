@@ -1,45 +1,52 @@
 defmodule Discord.Commands.Register do
-  alias Hex.API.Key
+  @moduledoc false
   use Bitwise, only_operators: true
 
-  ## Callback interface
-  @callback global_commands() :: [Nostrum.Struct.ApplicationCommand.application_command_map()]
+  defmacro __using__(opts) do
+    otp_app = Keyword.fetch!(opts, :otp_app)
+    config = Application.get_env(otp_app, __MODULE__)
 
-  @callback delete_global_commands() :: [String.t()]
+    gettext = Keyword.get(opts, :gettext, config[:gettext])
+    allowed_langs = Keyword.get(opts, :allowed_langs, config[:allowed_langs])
 
-  @optional_callbacks delete_global_commands: 0
-
-  ### Helper macros
-  defmacro __using__(_opts) do
     quote do
-      @behaviour unquote(__MODULE__)
-      alias unquote(__MODULE__)
       require unquote(__MODULE__)
+      import unquote(__MODULE__), only: [command: 3, localization_dict: 1]
 
-      import unquote(__MODULE__)
+      Module.register_attribute(__MODULE__, :commands, accumulate: true)
 
-      require FleetBot.Gettext
+      @localization_gettext unquote(gettext)
+      @localization_langs unquote(allowed_langs)
+      @__attr_storage__ []
+
+      @before_compile unquote(__MODULE__)
     end
   end
 
-  defmacro localization_dict(key) do
-    langs = Application.fetch_env!(:fleet_bot, FleetBot.Discord)[:discord_allowed_langs]
-
+  defmacro __before_compile__(_env) do
     quote do
-      Gettext.known_locales(FleetBot.Gettext)
-      |> Stream.filter(fn lang ->
-        Enum.member?(unquote(langs), lang)
-      end)
-      |> Stream.map(fn lang ->
-        Gettext.with_locale(lang, fn ->
-          {lang, FleetBot.Gettext.dgettext("discord_commands", unquote(key))}
-        end)
-      end)
-      |> Enum.into(%{})
+      @impl Discord.Commands
+      def global_commands do
+        @commands
+      end
+    end
+  end
+
+  defmacro command(name, description, opts) do
+    quote do
+      @commands unquote(__MODULE__).create_command(
+                  unquote(name),
+                  unquote(description),
+                  unquote(opts)
+                )
     end
   end
 
   defmacro create_command(name, description, opts \\ []) do
+    create_command_int(name, description, opts)
+  end
+
+  defp create_command_int(name, description, opts \\ []) do
     extra =
       Keyword.get(opts, :extra, %{})
       |> Macro.escape()
@@ -50,7 +57,8 @@ defmodule Discord.Commands.Register do
 
     options =
       if type == 1 do
-        Keyword.get(opts, :options, [])
+        # Keyword.get(opts, :options, [])
+        do_command_block(name, opts[:do])
       else
         nil
       end
@@ -75,6 +83,29 @@ defmodule Discord.Commands.Register do
     end
   end
 
+  defp do_command_block(_name, nil), do: nil
+
+  defp do_command_block(name, block) do
+    attr_name =
+      "__command_block_#{name}__"
+      |> String.to_atom()
+
+    quote do
+      import unquote(__MODULE__)
+
+      Module.register_attribute(__MODULE__, unquote(attr_name), accumulate: true)
+
+      try do
+        unquote(put_attribute(attr_name))
+        unquote(block)
+        Module.get_attribute(__MODULE__, unquote(attr_name), [])
+      after
+        unquote(pop_attribute())
+        Module.delete_attribute(__MODULE__, unquote(attr_name))
+      end
+    end
+  end
+
   defmacro create_option(name, description, opts \\ []) do
     extra =
       Keyword.get(opts, :extra, %{})
@@ -87,7 +118,8 @@ defmodule Discord.Commands.Register do
       |> command_option_type()
 
     choices = Keyword.get(opts, :choices)
-    options = Keyword.get(opts, :options)
+    options = Keyword.get(opts, :do)
+    options = do_command_block(name, options)
 
     channel_types =
       Keyword.get(opts, :channel_types)
@@ -119,21 +151,97 @@ defmodule Discord.Commands.Register do
     end
   end
 
-  defmacro create_choice(name, value, opts \\ []) do
-    extra =
-      Keyword.get(opts, :extra, %{})
-      |> Macro.escape()
+  defmacro option(name, description, opts \\ []) do
+    quote do
+      attribute = unquote(get_attribute())
+
+      Module.put_attribute(
+        __MODULE__,
+        attribute,
+        create_option(unquote(name), unquote(description), unquote(opts))
+      )
+    end
+  end
+
+  defmacro subcommand(name, description, opts \\ []) do
+    opts = Keyword.put(opts, :type, :sub_command)
 
     quote do
-      Map.merge(unquote(extra), %{
-        name: unquote(name),
-        name_localizations: localization_dict(unquote(name)),
-        value: unquote(value)
-      })
+      option(unquote(name), unquote(description), unquote(opts))
+    end
+  end
+
+  defmacro sub_command_group(name, description, opts \\ []) do
+    opts = Keyword.put(opts, :type, :sub_command_group)
+
+    quote do
+      option(unquote(name), unquote(description), unquote(opts))
+    end
+  end
+
+  defmacro string(name, description, opts \\ []) do
+    opts = Keyword.put(opts, :type, :string)
+
+    quote do
+      option(unquote(name), unquote(description), unquote(opts))
+    end
+  end
+
+  defmacro role(name, description, opts \\ []) do
+    opts = Keyword.put(opts, :type, :role)
+
+    quote do
+      option(unquote(name), unquote(description), unquote(opts))
+    end
+  end
+
+  defmacro localization_dict(key) do
+    # langs = Application.fetch_env!(:fleet_bot, FleetBot.Discord)[:discord_allowed_langs]
+
+    quote do
+      Gettext.known_locales(@localization_gettext)
+      |> Stream.filter(fn lang ->
+        Enum.member?(@localization_langs, lang)
+      end)
+      |> Stream.map(fn lang ->
+        Gettext.with_locale(lang, fn ->
+          {lang, @localization_gettext.dgettext("discord_commands", unquote(key))}
+        end)
+      end)
+      |> Enum.into(%{})
     end
   end
 
   ### Private macro helpers
+  defp put_attribute(attr) do
+    attr = Macro.expand_once(attr, __ENV__)
+
+    quote do
+      attrs = [unquote(attr)] ++ Module.get_attribute(__MODULE__, :__attr_storage__, [])
+      Module.put_attribute(__MODULE__, :__attr_storage__, attrs)
+    end
+  end
+
+  defp pop_attribute() do
+    quote do
+      case Module.get_attribute(__MODULE__, :__attr_storage__, []) do
+        [] ->
+          nil
+
+        [head | tail] ->
+          Module.put_attribute(__MODULE__, :__attr_storage__, tail)
+          head
+      end
+    end
+  end
+
+  defp get_attribute() do
+    quote do
+      Module.get_attribute(__MODULE__, :__attr_storage__, [])
+      |> hd
+    end
+  end
+
   defp command_input_type(:chat_input), do: 1
   defp command_input_type(:user), do: 2
   defp command_input_type(:message), do: 3
