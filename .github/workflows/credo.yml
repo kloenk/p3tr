@@ -1,0 +1,42 @@
+name: credo
+
+on:
+  push:
+    branches: [ "main", "staging", "trying" ]
+    tags: ['v*']
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  credo:
+    name: credo
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: '1.14.2'
+        otp-version: '25.1'
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get
+    - name: compile
+      run: mix compile
+    - name: credo
+      run: mix credo list --format=sarif --mute-exit-status > credo.sarif
+    - name: Upload analysis results to GitHub
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: credo.sarif
+        wait-for-processing: true

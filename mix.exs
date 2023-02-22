@@ -1,4 +1,4 @@
-defmodule P3tr.MixProject do
+defmodule P3trUmbrella.MixProject do
   use Mix.Project
 
   def project do
@@ -6,7 +6,10 @@ defmodule P3tr.MixProject do
       apps_path: "apps",
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases(),
+      releases: releases(),
+      default_release: :p3tr
     ]
   end
 
@@ -16,6 +19,26 @@ defmodule P3tr.MixProject do
   #
   # Run "mix help deps" for examples and options.
   defp deps do
-    []
+    [
+      # Dev
+      {:credo, "~> 1.7.0-rc.1", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false}
+    ]
+  end
+
+  defp aliases do
+    [
+      fmt: ["format"]
+    ]
+  end
+
+  defp releases do
+    [
+      p3tr: [
+        applications: [
+          p3tr: :permanent
+        ]
+      ]
+    ]
   end
 end
