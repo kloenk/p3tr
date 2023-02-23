@@ -15,8 +15,19 @@ defmodule P3tr.Discord.Pronoun do
       end
 
       subcommand "remove", "Remove pronoun" do
-        role("pronoun", "Pronoun to remove")
+        role("pronoun", "Pronoun to remove", required: true)
       end
     end
+  end
+
+  def command("pronoun", ["config" | args], interaction), do: config(args, interaction)
+
+  defp config(["default" | _args], _interaction) do
+    IO.warn(:todo_default)
+  end
+
+  defp config(["add" | args], interaction) do
+    IO.warn(:todo_add)
+    IO.inspect(args)
   end
 end

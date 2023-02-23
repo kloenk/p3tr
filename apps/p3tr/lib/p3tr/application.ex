@@ -8,6 +8,7 @@ defmodule P3tr.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      P3tr.Discord
       # Starts a worker by calling: P3tr.Worker.start_link(arg)
       # {P3tr.Worker, arg}
     ]

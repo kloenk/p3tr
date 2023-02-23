@@ -98,7 +98,9 @@ defmodule Discord.Commands.Register do
       try do
         unquote(put_attribute(attr_name))
         unquote(block)
+
         Module.get_attribute(__MODULE__, unquote(attr_name), [])
+        |> Enum.sort_by(&Map.get(&1, :required, false), :desc)
       after
         unquote(pop_attribute())
         Module.delete_attribute(__MODULE__, unquote(attr_name))

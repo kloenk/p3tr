@@ -2,7 +2,8 @@ defmodule Discord.Commands do
   @doc """
   Execute a command
   """
-  @callback command(String.t(), %Nostrum.Struct.Interaction{}) :: :ok | {:error, term()}
+  @callback command(String.t(), list(String.t()), %Nostrum.Struct.Interaction{}) ::
+              :ok | {:error, term()}
 
   @doc false
   @callback global_commands() :: [Nostrum.Struct.ApplicationCommand.application_command_map()]

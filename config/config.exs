@@ -20,6 +20,8 @@ config :p3tr, Discord.Commands.Register,
   gettext: P3tr.Gettext,
   allowed_langs: ~w(en de)
 
+config :p3tr, Discord, modules: [P3tr.Discord.Pronoun]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 env =
