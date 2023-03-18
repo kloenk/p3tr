@@ -197,6 +197,14 @@ defmodule Discord.Commands.Register do
     end
   end
 
+  defmacro boolean(name, description, opts \\ []) do
+    opts = Keyword.put(opts, :type, :boolean)
+
+    quote do
+      option(unquote(name), unquote(description), unquote(opts))
+    end
+  end
+
   defmacro localization_dict(key) do
     # langs = Application.fetch_env!(:fleet_bot, FleetBot.Discord)[:discord_allowed_langs]
 

@@ -34,6 +34,7 @@ defmodule P3tr.MixProject do
       {:ecto, "~> 3.8"},
       {:ecto_sql, "~> 3.0"},
       {:postgrex, ">= 0.0.0"},
+      {:typed_ecto_schema, "~> 0.4.1", runtime: false},
 
       # Gettext
       {:gettext, "~> 0.20"}

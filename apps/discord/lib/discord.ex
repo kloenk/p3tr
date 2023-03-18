@@ -8,6 +8,10 @@ defmodule Discord do
 
     modules = Keyword.get(config, :modules, config[:modules])
 
+    role_module =
+      Keyword.get(opts, :role, __CALLER__.module)
+      |> Macro.expand(__CALLER__)
+
     module_names =
       modules
       |> Enum.map(&get_module_commands/1)
@@ -20,6 +24,8 @@ defmodule Discord do
       @module_names unquote(module_names)
 
       @before_compile unquote(__MODULE__)
+
+      unquote(role_functions(role_module, __CALLER__))
     end
   end
 
@@ -43,6 +49,25 @@ defmodule Discord do
 
       def command_module(name) do
         Map.get(@module_names, name)
+      end
+    end
+  end
+
+  defp role_function(nil, _caller), do: nil
+  defp role_functions(false, _caller), do: nil
+
+  defp role_functions(module, caller) do
+    IO.inspect(module)
+    IO.inspect(caller.module)
+
+    if module == caller.module do
+      quote do
+        @behaviour Discord.Role
+        unquote(Discord.Role.role_helpers(module))
+      end
+    else
+      quote do
+        unquote(Discord.Role.role_helpers(module))
       end
     end
   end
@@ -109,7 +134,12 @@ defmodule Discord do
     [format_command_args(options)]
   end
 
-  defp format_command_args(args) do
+  defp format_command_args(%Nostrum.Struct.ApplicationCommandInteractionDataOption{
+         name: name,
+       } = opt) do
+    {:args, %{name => opt}}
+  end
+  defp format_command_args(args) when is_list(args) do
     args =
       args
       |> Enum.map(fn %Nostrum.Struct.ApplicationCommandInteractionDataOption{name: name} = opt ->

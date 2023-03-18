@@ -9,6 +9,12 @@
 # move said applications out of the umbrella.
 import Config
 
+config :p3tr,
+  namespace: P3tr,
+  ecto_repos: [P3tr.Repo]
+
+config :p3tr, P3tr.Repo, pool_size: 10
+
 # Sample configuration:
 #
 #     config :logger, :console,
