@@ -22,6 +22,10 @@ defmodule P3tr.Repo.Pronoun do
     P3tr.Repo.get_by(__MODULE__, guild_id: guild, role_id: id)
   end
 
+  def get_all(guild) do
+    P3tr.Repo.all(from p in __MODULE__, where: p.guild_id == ^guild)
+  end
+
   def remove_role(guild, id) do
     from(m in __MODULE__, where: m.guild_id == ^guild and m.role_id == ^id)
     |> remove_role

@@ -1,5 +1,4 @@
 defmodule P3tr.Discord.Pronoun do
-  alias Nostrum.Api
   require P3tr.Gettext
   use Discord.Commands, otp_app: :p3tr
 
@@ -97,6 +96,22 @@ defmodule P3tr.Discord.Pronoun do
       end
 
     IO.inspect(msg, label: "msg")
+  end
+
+  defp config(["remove-all" | _], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
+    roles =
+      P3tr.Repo.Pronoun.get_all(guild_id)
+      |> Enum.map(& &1.role_id)
+
+    roles
+    |> Enum.map(fn role ->
+      {role, P3tr.Discord.delete_role(guild_id, role, "Removed by user")}
+    end)
+    |> Enum.map(fn
+      {role, :ok} -> P3tr.Repo.Pronoun.remove_role(guild_id, role)
+      {role, _} -> {:error, role}
+    end)
+    |> IO.inspect()
   end
 
   defp create_default_pronoun(guild_id, {key, color, primary}) do
