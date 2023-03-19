@@ -37,7 +37,10 @@ defmodule P3tr.MixProject do
       {:typed_ecto_schema, "~> 0.4.1", runtime: false},
 
       # Gettext
-      {:gettext, "~> 0.20"}
+      {:gettext, "~> 0.20"},
+
+      # Recompiling
+      {:exsync, "~> 0.2.4", only: :dev}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
       # {:sibling_app_in_umbrella, in_umbrella: true}

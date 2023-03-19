@@ -261,7 +261,6 @@ defmodule P3tr.Discord.Pronoun do
     roles =
       P3tr.Repo.Pronoun.get_all(guild_id)
       |> Enum.map(& &1.role_id)
-      |> IO.inspect()
 
     result =
       roles
@@ -341,9 +340,6 @@ defmodule P3tr.Discord.Pronoun do
     else
       true ->
         {:error, {:already_exists, key}}
-
-      %P3tr.Repo.Pronoun{} = pronoun ->
-        {:error, {:already_exists, pronoun}}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         Nostrum.Api.delete_guild_role(guild_id, Ecto.Changeset.get_field(changeset, :role_id))

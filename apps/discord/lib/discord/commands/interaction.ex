@@ -14,7 +14,8 @@ defmodule Discord.Commands.Interaction do
           interaction_response_data: 0,
           interaction_response_data: 1,
           button: 1,
-          button: 2
+          button: 2,
+          action_row: 1
         ]
     end
   end
@@ -87,6 +88,15 @@ defmodule Discord.Commands.Interaction do
         custom_id: unquote(opts[:custom_id]),
         url: unquote(opts[:url]),
         disabled: unquote(opts[:disabled])
+      }
+    end
+  end
+
+  defmacro action_row(components) do
+    quote do
+      %Nostrum.Struct.Component{
+        type: unquote(component_type(:action_row)),
+        components: unquote(components)
       }
     end
   end

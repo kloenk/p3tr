@@ -11,7 +11,11 @@ defmodule P3tr.Repo.Role do
   schema "roles" do
     field :guild_id, :integer
     # field :role_id, :integer, primary_key: true
-    field :module, Ecto.Enum, values: [{P3tr.Discord.Pronoun, "P3tr.Discord.Pronoun"}]
+    field :module, Ecto.Enum,
+      values: [
+        {P3tr.Discord.Pronoun, "P3tr.Discord.Pronoun"},
+        {P3tr.Discord.Topic, "P3tr.Discord.Topic"}
+      ]
   end
 
   def create_changeset(role \\ %__MODULE__{}, attrs) do

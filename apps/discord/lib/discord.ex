@@ -1,4 +1,5 @@
 defmodule Discord do
+  alias ElixirSense.Log
   alias Nostrum.Consumer
 
   # Macros
@@ -93,15 +94,16 @@ defmodule Discord do
 
         apply(module, :command, [command, args, interaction])
         |> case do
-          {:ok, _} = ok ->
-            ok
-
-          :ok ->
-            :ok
-
           {:error, e} ->
             Logger.info("Error executing command: #{inspect(e)}")
             {:error, e}
+
+          :error ->
+            Logger.info("Error executing command")
+            :error
+
+          v ->
+            v
         end
       end
 
@@ -118,15 +120,16 @@ defmodule Discord do
 
         apply(module, :component, [name, args, interaction])
         |> case do
-          {:ok, _} = ok ->
-            ok
-
-          :ok ->
-            :ok
-
           {:error, e} ->
             Logger.info("Error executing command: #{inspect(e)}")
             {:error, e}
+
+          :error ->
+            Logger.info("Error executing command")
+            :error
+
+          v ->
+            v
         end
       end
 
