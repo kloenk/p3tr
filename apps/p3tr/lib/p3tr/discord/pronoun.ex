@@ -31,15 +31,35 @@ defmodule P3tr.Discord.Pronoun do
     {:ask, 0xFCBA03, false}
   ]
 
+  def command("pronoun", ["prompt" | _], interaction) do
+    Nostrum.Api.create_interaction_response(
+      interaction,
+      interaction_response(:deferred_channel_message_with_source, flags: :ephemeral)
+    )
+
+    buttons = create_buttons(interaction.guild_id)
+
+    message = %{
+      type: :rich,
+      title: "👋 Hey there! What are your pronouns?",
+      description: "Use the buttons below to select your pronouns."
+    }
+
+    Nostrum.Api.create_message!(interaction.channel_id, embeds: [message], components: buttons)
+
+    Nostrum.Api.edit_interaction_response(
+      interaction,
+      interaction_response_data(content: "Created prompts")
+    )
+  end
+
   def command("pronoun", ["config" | args], interaction) do
     Nostrum.Api.create_interaction_response(
       interaction,
       interaction_response(:deferred_channel_message_with_source, flags: :ephemeral)
     )
 
-    embeds =
-      config(args, interaction)
-      |> IO.inspect()
+    embeds = config(args, interaction)
 
     Nostrum.Api.edit_interaction_response(
       interaction,
@@ -47,6 +67,37 @@ defmodule P3tr.Discord.Pronoun do
     )
   end
 
+  ## Prompt
+  defp create_buttons(guild) do
+    pronouns = P3tr.Repo.Pronoun.get_all(guild)
+
+    primary =
+      pronouns
+      |> Stream.filter(& &1.primary)
+      |> create_buttons_row()
+
+    secondary =
+      pronouns
+      |> Stream.reject(& &1.primary)
+      |> create_buttons_row()
+
+    [primary, secondary]
+  end
+
+  defp create_buttons_row(buttons) do
+    buttons
+    |> Stream.map(&create_button/1)
+    |> Enum.into([])
+    |> Nostrum.Struct.Component.ActionRow.action_row()
+  end
+
+  defp create_button(pronoun) do
+    style = if pronoun.primary, do: :primary, else: :secondary
+
+    button(style, label: get_label(pronoun), custom_id: "pronoun:#{pronoun.key}")
+  end
+
+  ## Config
   defp config(["default" | _args], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
     result =
       @default_pronouns
@@ -232,6 +283,11 @@ defmodule P3tr.Discord.Pronoun do
     name = get_name_for_default_role(key)
     create_pronoun(guild_id, key, name, primary, color: color)
   end
+
+  defp get_label(%P3tr.Repo.Pronoun{name: name}) when is_binary(name), do: name
+
+  defp get_label(%P3tr.Repo.Pronoun{key: key}),
+    do: get_name_for_default_role(String.to_existing_atom(key))
 
   defp get_name_for_default_role(:they), do: P3tr.Gettext.dgettext("pronouns", "They/Them")
   defp get_name_for_default_role(:she), do: P3tr.Gettext.dgettext("pronoun", "She/Her")

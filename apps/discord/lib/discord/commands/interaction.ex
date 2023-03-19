@@ -1,5 +1,6 @@
 defmodule Discord.Commands.Interaction do
   @moduledoc false
+  alias Hex.API.Key
 
   # Macors
   defmacro __using__(_opts) do
@@ -11,7 +12,9 @@ defmodule Discord.Commands.Interaction do
           interaction_response: 1,
           interaction_response: 2,
           interaction_response_data: 0,
-          interaction_response_data: 1
+          interaction_response_data: 1,
+          button: 1,
+          button: 2
         ]
     end
   end
@@ -71,6 +74,23 @@ defmodule Discord.Commands.Interaction do
     end
   end
 
+  defmacro button(style, opts \\ []) do
+    type = component_type(:button)
+    style = style
+
+    quote do
+      %Nostrum.Struct.Component{
+        type: unquote(type),
+        style: unquote(__MODULE__).button_style(unquote(style)),
+        label: unquote(opts[:label]),
+        emoji: unquote(opts[:emoji]),
+        custom_id: unquote(opts[:custom_id]),
+        url: unquote(opts[:url]),
+        disabled: unquote(opts[:disabled])
+      }
+    end
+  end
+
   ## Macro helpers
   import Bitwise
 
@@ -95,4 +115,21 @@ defmodule Discord.Commands.Interaction do
   def interaction_response_data_flags(:ephemeral), do: 1 <<< 6
   def interaction_response_data_flags(v) when is_number(v), do: v
   def interaction_response_data_flags(nil), do: nil
+
+  def component_type(:action_row), do: 1
+  def component_type(:button), do: 2
+  def component_type(:string_select), do: 3
+  def component_type(:text_input), do: 4
+  def component_type(:user_select), do: 5
+  def component_type(:role), do: 6
+  def component_type(:mentionable_select), do: 7
+  def component_type(:channel_select), do: 8
+  def component_type(v) when is_number(v), do: v
+
+  def button_style(:primary), do: 1
+  def button_style(:secondary), do: 2
+  def button_style(:success), do: 3
+  def button_style(:danger), do: 4
+  def button_style(:link), do: 5
+  def button_style(v) when is_number(v), do: v
 end
