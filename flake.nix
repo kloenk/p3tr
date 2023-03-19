@@ -58,7 +58,7 @@
             modules = [
               {
                 # https://devenv.sh/reference/options/
-                packages = with pkgs; [ mix2nix git ];
+                packages = with pkgs; [ mix2nix git inotify-tools ];
                 languages.elixir.enable = true;
                 pre-commit.hooks.actionlint.enable = true;
                 pre-commit.hooks.nixfmt.enable = true;

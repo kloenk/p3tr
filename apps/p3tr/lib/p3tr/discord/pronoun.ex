@@ -68,35 +68,35 @@ defmodule P3tr.Discord.Pronoun do
   end
 
   def component("pronoun", [component], interaction) do
-      P3tr.Repo.Pronoun.get_role(interaction.guild_id, component)
-      |> case do
-        nil ->
-          {:error, "Role not found"}
+    P3tr.Repo.Pronoun.get_role(interaction.guild_id, component)
+    |> case do
+      nil ->
+        {:error, "Role not found"}
 
-        role ->
-          if Enum.member?(interaction.member.roles, role.role_id) do
-            Nostrum.Api.remove_guild_member_role(
-              interaction.guild_id,
-              interaction.member.user.id,
-              role.role_id,
-              "User Pronoun Change"
-            )
-          else
-            Nostrum.Api.add_guild_member_role(
-              interaction.guild_id,
-              interaction.member.user.id,
-              role.role_id,
-              "User Pronoun Change"
-            )
-          end
-
-          Nostrum.Api.create_interaction_response(
-            interaction,
-            interaction_response(:deferred_update_channel)
+      role ->
+        if Enum.member?(interaction.member.roles, role.role_id) do
+          Nostrum.Api.remove_guild_member_role(
+            interaction.guild_id,
+            interaction.member.user.id,
+            role.role_id,
+            "User Pronoun Change"
           )
+        else
+          Nostrum.Api.add_guild_member_role(
+            interaction.guild_id,
+            interaction.member.user.id,
+            role.role_id,
+            "User Pronoun Change"
+          )
+        end
 
-          {:ok, role}
-      end
+        Nostrum.Api.create_interaction_response(
+          interaction,
+          interaction_response(:deferred_update_channel)
+        )
+
+        {:ok, role}
+    end
 
     :ok
   end
