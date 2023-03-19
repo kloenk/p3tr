@@ -18,8 +18,12 @@ defmodule P3tr.Repo.Pronoun do
     P3tr.Repo.exists?(from p in __MODULE__, where: p.guild_id == ^guild and p.key == ^key)
   end
 
-  def get_role(guild, id) do
+  def get_role(guild, id) when is_integer(guild) and is_integer(id) do
     P3tr.Repo.get_by(__MODULE__, guild_id: guild, role_id: id)
+  end
+
+  def get_role(guild, id) when is_integer(guild) and is_binary(id) do
+    P3tr.Repo.get_by(__MODULE__, guild_id: guild, key: id)
   end
 
   def get_all(guild) do

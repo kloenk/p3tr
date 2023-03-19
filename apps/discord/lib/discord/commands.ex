@@ -3,10 +3,15 @@ defmodule Discord.Commands do
   Execute a command
   """
   @callback command(String.t(), list(String.t()), %Nostrum.Struct.Interaction{}) ::
-              :ok | {:error, term()}
+              :ok | {:ok, term()} | {:error, term()}
+
+  @callback component(String.t(), list(String.t()), %Nostrum.Struct.Interaction{}) ::
+              :ok | {:ok, term()} | {:error, term()}
 
   @doc false
   @callback global_commands() :: [Nostrum.Struct.ApplicationCommand.application_command_map()]
+
+  @optional_callbacks component: 3
 
   # Macros
   defmacro __using__(opts) do

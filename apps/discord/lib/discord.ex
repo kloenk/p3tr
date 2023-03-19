@@ -76,6 +76,7 @@ defmodule Discord do
   defp nostrum_functions do
     quote do
       use Nostrum.Consumer
+      require Logger
       def start_link, do: Consumer.start_link(__MODULE__)
 
       @impl Nostrum.Consumer
@@ -84,12 +85,49 @@ defmodule Discord do
              %Nostrum.Struct.Interaction{
                data: %Nostrum.Struct.ApplicationCommandInteractionData{name: command}
              } = interaction, _ws_state}
-          ) do
+          )
+          when is_binary(command) do
         module = command_module(command)
 
         args = unquote(__MODULE__).get_command_list(interaction.data)
 
         apply(module, :command, [command, args, interaction])
+        |> case do
+          {:ok, _} = ok ->
+            ok
+
+          :ok ->
+            :ok
+
+          {:error, e} ->
+            Logger.info("Error executing command: #{inspect(e)}")
+            {:error, e}
+        end
+      end
+
+      @impl Nostrum.Consumer
+      def handle_event(
+            {:INTERACTION_CREATE,
+             %Nostrum.Struct.Interaction{
+               data: %Nostrum.Struct.ApplicationCommandInteractionData{custom_id: id, name: nil}
+             } = interaction, _ws_state}
+          ) do
+        [name | args] = String.split(id, ":")
+
+        module = command_module(name)
+
+        apply(module, :component, [name, args, interaction])
+        |> case do
+          {:ok, _} = ok ->
+            ok
+
+          :ok ->
+            :ok
+
+          {:error, e} ->
+            Logger.info("Error executing command: #{inspect(e)}")
+            {:error, e}
+        end
       end
 
       @impl Nostrum.Consumer
