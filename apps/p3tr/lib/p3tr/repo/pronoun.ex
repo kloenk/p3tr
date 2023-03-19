@@ -28,6 +28,7 @@ defmodule P3tr.Repo.Pronoun do
 
   def remove_role(guild, id) do
     from(m in __MODULE__, where: m.guild_id == ^guild and m.role_id == ^id)
+    |> P3tr.Repo.one()
     |> remove_role
   end
 

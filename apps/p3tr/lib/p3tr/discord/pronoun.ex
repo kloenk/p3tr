@@ -31,7 +31,21 @@ defmodule P3tr.Discord.Pronoun do
     {:ask, 0xFCBA03, false}
   ]
 
-  def command("pronoun", ["config" | args], interaction), do: config(args, interaction)
+  def command("pronoun", ["config" | args], interaction) do
+    Nostrum.Api.create_interaction_response(
+      interaction,
+      interaction_response(:deferred_channel_message_with_source, flags: :ephemeral)
+    )
+
+    embeds =
+      config(args, interaction)
+      |> IO.inspect()
+
+    Nostrum.Api.edit_interaction_response(
+      interaction,
+      interaction_response_data(embeds: embeds, content: "")
+    )
+  end
 
   defp config(["default" | _args], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
     result =
@@ -55,12 +69,29 @@ defmodule P3tr.Discord.Pronoun do
       |> Enum.filter(&match?({:ok, _}, &1))
       # unwrap from ok tuple
       |> Enum.map(fn
-        {:ok, inner} -> inner
+        {:ok, %{role_id: id, key: key}} -> "- <@&#{id}> `#{key}`"
         _ -> raise "unexpected"
       end)
+      |> Enum.join("\n")
 
-    IO.inspect(failed, label: "failed")
-    IO.inspect(ok, label: "ok")
+    fields =
+      [{"Created", ok}, {"Failed", failed}]
+      |> Enum.map(fn
+        {_, ""} -> nil
+        v -> v
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(fn {name, msg} -> %{name: name, value: msg} end)
+
+    [
+      %{
+        type: :rich,
+        title: "Created default pronouns",
+        description: "Default pronouns loaded",
+        color: 0x00FF00,
+        fields: fields
+      }
+    ]
   end
 
   defp config(["add", args: args], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
@@ -68,12 +99,46 @@ defmodule P3tr.Discord.Pronoun do
     name = Commands.get(args, "name", key)
     primary = Commands.get(args, "primary", true)
 
-    _color =
-      Commands.get(args, "color")
-      |> inspect()
-      |> IO.warn()
+    color = 0x0000FF
+    # TODO: implement
+    # Commands.get(args, "color")
+
+    color
+    |> inspect()
+    |> IO.warn()
 
     create_pronoun(guild_id, key, name, primary)
+    |> case do
+      {:ok, role} ->
+        [
+          %{
+            type: :rich,
+            title: "Created Role",
+            description: "Role <@&#{role.role_id}> created for `#{key}`",
+            color: color
+          }
+        ]
+
+      {:error, {:already_exists, name}} ->
+        [
+          %{
+            type: :rich,
+            title: "Failed to create role",
+            description: "Role `#{name}` already exists",
+            color: 0xFF3333
+          }
+        ]
+
+      {:error, :role_create_failed} ->
+        [
+          %{
+            type: :rich,
+            title: "Failed to create role",
+            description: "Failed to create",
+            color: 0xFF3333
+          }
+        ]
+    end
   end
 
   defp config(["remove", args: args], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
@@ -84,34 +149,83 @@ defmodule P3tr.Discord.Pronoun do
       with role when not is_nil(role) <- P3tr.Repo.Pronoun.get_role(guild_id, role),
            :ok <- P3tr.Discord.delete_role(guild_id, role.role_id, reason),
            {:ok, role} <- P3tr.Repo.Pronoun.remove_role(role) do
-        if role.name do
-          {:ok, "Removed role #{role.name}"}
-        else
-          {:ok, "Removed role #{role.key}"}
-        end
+        msg =
+          if role.name do
+            "Removed role #{role.name}"
+          else
+            "Removed role #{role.key}"
+          end
+
+        %{type: :rich, title: "Removed role", description: msg, color: 0x00FF00}
       else
         v ->
           IO.inspect(v)
-          {:error, "Failed to remove role"}
+
+          %{
+            type: :rich,
+            title: "Failed to remove role",
+            description: "Failed to remove role",
+            color: 0xFF3333
+          }
       end
 
-    IO.inspect(msg, label: "msg")
+    [msg]
   end
 
   defp config(["remove-all" | _], %Nostrum.Struct.Interaction{guild_id: guild_id}) do
     roles =
       P3tr.Repo.Pronoun.get_all(guild_id)
       |> Enum.map(& &1.role_id)
+      |> IO.inspect()
 
-    roles
-    |> Enum.map(fn role ->
-      {role, P3tr.Discord.delete_role(guild_id, role, "Removed by user")}
-    end)
-    |> Enum.map(fn
-      {role, :ok} -> P3tr.Repo.Pronoun.remove_role(guild_id, role)
-      {role, _} -> {:error, role}
-    end)
-    |> IO.inspect()
+    result =
+      roles
+      |> Enum.map(fn role ->
+        {role, P3tr.Discord.delete_role(guild_id, role, "Removed by user")}
+      end)
+      |> Enum.map(fn
+        {role, :ok} -> P3tr.Repo.Pronoun.remove_role(guild_id, role)
+        {_role, {:error, error}} -> {:error, error}
+      end)
+
+    failed =
+      result
+      |> Enum.filter(&match?({:error, _}, &1))
+      # unwrap from error tuple
+      |> Enum.map(fn
+        {:error, inner} -> inner
+        _ -> raise "unexpected"
+      end)
+      |> Enum.map(&format_error/1)
+      |> Enum.join("\n")
+
+    ok =
+      result
+      |> Enum.filter(&match?({:ok, _}, &1))
+      # unwrap from ok tuple
+      |> Enum.map(fn
+        {:ok, %{key: key}} -> "- `#{key}`"
+        _ -> raise "unexpected"
+      end)
+      |> Enum.join("\n")
+
+    fields =
+      [{"Deleted", ok}, {"Failed", failed}]
+      |> Enum.map(fn
+        {_, ""} -> nil
+        v -> v
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(fn {name, msg} -> %{name: name, value: msg} end)
+
+    [
+      %{
+        type: :rich,
+        title: "Removed all pronouns",
+        color: 0x00FF00,
+        fields: fields
+      }
+    ]
   end
 
   defp create_default_pronoun(guild_id, {key, color, primary}) do
@@ -127,13 +241,12 @@ defmodule P3tr.Discord.Pronoun do
   defp get_name_for_default_role(:ask),
     do: P3tr.Gettext.dgettext("pronoun", "Ask for my Pronouns")
 
+  @spec create_pronoun(Nostrum.Snowflake.t(), atom(), String.t() | nil, boolean(), keyword()) ::
+          {:ok, P3tr.Repo.Pronoun.t()} | {:error, any}
   def create_pronoun(guild_id, key, name, primary, opts \\ []) when is_number(guild_id) do
-    IO.inspect(key)
-
     with false <- P3tr.Repo.Pronoun.exists?(guild_id, to_string(key)),
          {:ok, role} <- P3tr.Discord.create_role(__MODULE__, guild_id, name, opts),
          {:ok, role} <- P3tr.Repo.Pronoun.create_pronoun(guild_id, role, key, nil, primary) do
-      IO.inspect(role)
       {:ok, role}
     else
       true ->
@@ -143,14 +256,12 @@ defmodule P3tr.Discord.Pronoun do
         {:error, {:already_exists, pronoun}}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         Nostrum.Api.delete_guild_role(guild_id, Ecto.Changeset.get_field(changeset, :role_id))
         {:error, {:invalid_changeset, changeset}}
 
       {:error, reason} ->
         {:error, reason}
     end
-    |> IO.inspect(label: "create_pronoun")
   end
 
   defp format_error({:already_exists, key}), do: "- Pronoun `#{key}` already exists"

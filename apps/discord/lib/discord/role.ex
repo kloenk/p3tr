@@ -42,7 +42,7 @@ defmodule Discord.Role do
         {:ok, role}
 
       {:error, e} ->
-        Nostrum.Api.delete_guild_role!(guild, role.id)
+        Nostrum.Api.delete_guild_role!(guild, role)
         {:error, e}
     end
   end

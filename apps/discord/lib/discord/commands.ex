@@ -13,6 +13,7 @@ defmodule Discord.Commands do
     quote do
       @behaviour unquote(__MODULE__)
       use Discord.Commands.Register, unquote(opts)
+      use Discord.Commands.Interaction, unquote_splicing(opts)
 
       alias unquote(__MODULE__)
     end
