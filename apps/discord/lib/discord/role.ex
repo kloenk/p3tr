@@ -1,11 +1,10 @@
 defmodule Discord.Role do
   import Nostrum.Snowflake, only: [is_snowflake: 1]
 
-  @callback(
-    store_role(module(), Nostrum.Snowflake.t(), Nostrum.Snowflake.t()) :: :ok,
-    {:error, term()}
-  )
-  @callback(remove_role(Nostrum.Snowflake.t()) :: :ok, {:error, term()})
+  @callback store_role(module(), Nostrum.Snowflake.t(), Nostrum.Snowflake.t()) ::
+              :ok
+              | {:error, term()}
+  @callback delete_role(Nostrum.Snowflake.t(), Nostrum.Snowflake.t()) :: :ok | {:error, term()}
 
   @doc """
   Creates a role with the given name and options.
@@ -25,20 +24,39 @@ defmodule Discord.Role do
     reason = get_reason_text(module)
 
     Nostrum.Api.create_guild_role(guild, opts, reason)
+    |> IO.inspect(label: "create_role")
     |> case do
       {:ok, role} -> store_role(store_module, module, guild, role)
       v -> v
     end
   end
 
-  defp store_role(store_module, module, guild, role) do
+  defp store_role(store_module, module, guild, role)
+       when is_integer(guild) and is_integer(role) do
     store_module.store_role(module, guild, role)
     |> case do
-      :ok -> {:ok, role}
-      {:ok, _} -> {:ok, role}
+      :ok ->
+        {:ok, role}
+
+      {:ok, _} ->
+        {:ok, role}
+
       {:error, e} ->
         Nostrum.Api.delete_guild_role!(guild, role.id)
         {:error, e}
+    end
+  end
+
+  defp store_role(store_module, module, guild, %{id: role})
+       when is_integer(guild) and is_integer(role) do
+    store_role(store_module, module, guild, role)
+  end
+
+  def delete_role(store_module, guild, role, reason \\ nil) do
+    Nostrum.Api.delete_guild_role(guild, role, reason)
+    |> case do
+      {:ok} -> store_module.delete_role(guild, role)
+      v -> v
     end
   end
 
@@ -80,6 +98,12 @@ defmodule Discord.Role do
               {:ok, Nostrum.Struct.Guild.Role.t()} | {:error, term()}
       def create_role(module \\ nil, guild, name, opts \\ []) do
         Discord.Role.create_role(unquote(module), module, guild, name, opts)
+      end
+
+      @spec delete_role(Nostrum.Snowflake.t(), Nostrum.Snowflake.t(), String.t() | nil) ::
+              :ok | {:error, term()}
+      def delete_role(guild, role, reason \\ nil) do
+        Discord.Role.delete_role(unquote(module), guild, role, reason)
       end
     end
   end

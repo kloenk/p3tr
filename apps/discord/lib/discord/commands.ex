@@ -19,7 +19,7 @@ defmodule Discord.Commands do
   end
 
   def get(%Nostrum.Struct.ApplicationCommandInteractionDataOption{
-        value: value,
+        value: value
       }) do
     value
   end

@@ -134,11 +134,14 @@ defmodule Discord do
     [format_command_args(options)]
   end
 
-  defp format_command_args(%Nostrum.Struct.ApplicationCommandInteractionDataOption{
-         name: name,
-       } = opt) do
+  defp format_command_args(
+         %Nostrum.Struct.ApplicationCommandInteractionDataOption{
+           name: name
+         } = opt
+       ) do
     {:args, %{name => opt}}
   end
+
   defp format_command_args(args) when is_list(args) do
     args =
       args

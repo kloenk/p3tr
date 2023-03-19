@@ -28,7 +28,8 @@ defmodule P3trUmbrella.MixProject do
 
   defp aliases do
     [
-      fmt: ["format"]
+      fmt: ["format"],
+      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"]
     ]
   end
 

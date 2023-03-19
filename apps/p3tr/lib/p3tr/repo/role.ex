@@ -2,6 +2,7 @@ defmodule P3tr.Repo.Role do
   use TypedEctoSchema
   import Ecto.Changeset
   import P3tr.Repo, only: [validate_snowflake: 2]
+  import Ecto.Query
 
   @behaviour Discord.Role
 
@@ -9,7 +10,7 @@ defmodule P3tr.Repo.Role do
 
   schema "roles" do
     field :guild_id, :integer
-    #field :role_id, :integer, primary_key: true
+    # field :role_id, :integer, primary_key: true
     field :module, Ecto.Enum, values: [{P3tr.Discord.Pronoun, "P3tr.Discord.Pronoun"}]
   end
 
@@ -23,9 +24,23 @@ defmodule P3tr.Repo.Role do
 
   # Discord.Role
   @impl Discord.Role
-  def store_role(module, guild, role) do
+  def store_role(module, guild, role) when is_integer(guild) and is_integer(role) do
     create_changeset(%__MODULE__{}, %{guild_id: guild, role_id: role, module: module})
     |> P3tr.Repo.insert()
-    :ok
+    |> case do
+      {:ok, _} -> :ok
+      v -> v
+    end
+  end
+
+  @impl Discord.Role
+  def delete_role(guild, role) do
+    from(m in __MODULE__, where: m.guild_id == ^guild and m.role_id == ^role)
+    |> P3tr.Repo.one()
+    |> P3tr.Repo.delete()
+    |> case do
+      {:ok, _} -> :ok
+      v -> v
+    end
   end
 end
