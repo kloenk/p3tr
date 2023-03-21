@@ -23,7 +23,7 @@ defmodule P3tr.Discord.Topic do
 
   def command("topic", ["prompt" | _], interaction) do
     buttons = [
-      button(:primary, custom_id: "topic:picker", label: "Select topics")
+      button(:primary, custom_id: "topic_prompt", label: "Select topics")
     ]
 
     embed = %{
@@ -55,6 +55,116 @@ defmodule P3tr.Discord.Topic do
       interaction,
       interaction_response_data(embeds: embeds)
     )
+  end
+
+  def component("topic", ["prompt"], interaction) do
+    Nostrum.Api.create_interaction_response(
+      interaction,
+      interaction_response(:deferred_channel_message_with_source, flags: :ephemeral)
+    )
+
+    prompt(interaction)
+    |> case do
+      [] ->
+        Nostrum.Api.edit_interaction_response(
+          interaction,
+          interaction_response_data(content: "No topics found")
+        )
+
+      options ->
+        Nostrum.Api.edit_interaction_response(
+          interaction,
+          interaction_response_data(
+            content: "Select topics",
+            components: [
+              action_row([select_menu(:string_select, "topic_select", options: options)])
+            ]
+          )
+        )
+    end
+  end
+
+  def component("topic", ["select"], interaction) do
+    Nostrum.Api.create_interaction_response(
+      interaction,
+      interaction_response(:deferred_update_channel, flags: :ephemeral)
+    )
+
+    guild = interaction.guild_id
+
+    values =
+      interaction.data.values
+      |> Stream.map(&String.split(&1, "_"))
+      |> Stream.map(&List.last/1)
+      |> Stream.map(&P3tr.Repo.Topic.get(guild, &1))
+      |> Enum.into([])
+
+    member_roles = interaction.member.roles
+    member_id = interaction.member.user.id
+
+    topics = P3tr.Repo.Topic.get_all(guild)
+
+    removed_topics =
+      topics
+      |> Enum.filter(fn %P3tr.Repo.Topic{} = topic -> !Enum.member?(values, topic) end)
+      |> Enum.filter(fn %P3tr.Repo.Topic{role_id: role_id} ->
+        Enum.member?(member_roles, role_id)
+      end)
+      |> Stream.map(&apply_topic(:del, guild, member_id, &1))
+      |> Enum.into([])
+
+    added_topics =
+      values
+      |> Enum.filter(fn %P3tr.Repo.Topic{role_id: role_id} ->
+        !Enum.member?(member_roles, role_id)
+      end)
+      |> Stream.map(&apply_topic(:add, guild, member_id, &1))
+      |> Enum.into([])
+
+    failed_remove =
+      Enum.filter(removed_topics, fn
+        {:error, _} -> true
+        _ -> false
+      end)
+
+    failed_add =
+      Enum.filter(added_topics, fn
+        {:error, _} -> true
+        _ -> false
+      end)
+
+    if failed_remove != [] or failed_add != [] do
+      Nostrum.Api.edit_interaction_response!(
+        interaction,
+        interaction_response_data(content: "Failed to update topics")
+      )
+    else
+      Nostrum.Api.edit_interaction_response!(
+        interaction,
+        interaction_response_data(content: "Updated topics")
+      )
+    end
+  end
+
+  defp apply_topic(:del, guild, user_id, role) do
+    Nostrum.Api.remove_guild_member_role(guild, user_id, role.role_id, "User Topic change")
+  end
+
+  defp apply_topic(:add, guild, user_id, role) do
+    Nostrum.Api.add_guild_member_role(guild, user_id, role.role_id, "User Topic change")
+  end
+
+  defp prompt(interaction) do
+    member_roles = interaction.member.roles
+
+    options =
+      P3tr.Repo.Topic.get_all(interaction.guild_id)
+      |> Enum.map(fn %P3tr.Repo.Topic{key: key, name: name, description: description, role_id: id} ->
+        select_option(name, "topic_select_#{key}",
+          description: description,
+          default: Enum.member?(member_roles, id)
+        )
+      end)
   end
 
   defp config(["add", args: args], interaction) do

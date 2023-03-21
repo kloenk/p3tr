@@ -15,7 +15,11 @@ defmodule Discord.Commands.Interaction do
           interaction_response_data: 1,
           button: 1,
           button: 2,
-          action_row: 1
+          action_row: 1,
+          select_menu: 2,
+          select_menu: 3,
+          select_option: 2,
+          select_option: 3
         ]
     end
   end
@@ -99,6 +103,41 @@ defmodule Discord.Commands.Interaction do
         components: unquote(components)
       }
     end
+  end
+
+  defmacro select_menu(type, id, opts \\ []) do
+    type = component_type(type)
+    min_values = opts[:min_values] || 0
+
+    max_values =
+      opts[:max_values] ||
+        quote do
+          if options, do: Enum.count(options), else: 0
+        end
+
+    quote do
+      options = unquote(opts[:options])
+
+      %Nostrum.Struct.Component{
+        type: unquote(type),
+        custom_id: unquote(id),
+        options: options,
+        placeholder: unquote(opts[:placeholder]),
+        min_values: unquote(min_values),
+        max_values: unquote(max_values),
+        disabled: unquote(opts[:disabled])
+      }
+    end
+  end
+
+  def select_option(label, value, opts \\ []) do
+    %Nostrum.Struct.Component.Option{
+      label: label,
+      value: value,
+      description: opts[:description],
+      emoji: opts[:emoji],
+      default: opts[:default]
+    }
   end
 
   ## Macro helpers

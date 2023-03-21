@@ -67,7 +67,7 @@ defmodule P3tr.Discord.Pronoun do
     )
   end
 
-  def component("pronoun", [component], interaction) do
+  def component("pronoun", ["select", component], interaction) do
     P3tr.Repo.Pronoun.get_role(interaction.guild_id, component)
     |> case do
       nil ->
@@ -128,7 +128,7 @@ defmodule P3tr.Discord.Pronoun do
   defp create_button(pronoun) do
     style = if pronoun.primary, do: :primary, else: :secondary
 
-    button(style, label: get_label(pronoun), custom_id: "pronoun:#{pronoun.key}")
+    button(style, label: get_label(pronoun), custom_id: "pronoun_select_#{pronoun.key}")
   end
 
   ## Config

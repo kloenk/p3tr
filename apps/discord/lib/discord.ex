@@ -114,7 +114,11 @@ defmodule Discord do
                data: %Nostrum.Struct.ApplicationCommandInteractionData{custom_id: id, name: nil}
              } = interaction, _ws_state}
           ) do
-        [name | args] = String.split(id, ":")
+        IO.inspect(id, label: "id")
+
+        [name | args] =
+          String.split(id, "_")
+          |> IO.inspect()
 
         module = command_module(name)
 
