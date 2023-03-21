@@ -33,7 +33,14 @@
             src = self;
             mixEnv = "prod";
 
-            mixDeps = import ./nix/mix.nix { inherit lib beamPackages; };
+            overrideDeps = (self: super: {
+              gun = super.remedy_gun.override { name = "gun"; };
+              cowlib = super.remedy_cowlib.override { name = "cowlib"; };
+            });
+            mixDeps = import ./nix/mix.nix {
+              inherit lib beamPackages;
+              overrides = overrideDeps;
+            };
           in packages.mixRelease {
             inherit pname version src mixEnv;
 

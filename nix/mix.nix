@@ -216,6 +216,19 @@ let
       beamDeps = [];
     };
 
+    exsync = buildMix rec {
+      name = "exsync";
+      version = "0.2.4";
+
+      src = fetchHex {
+        pkg = "${name}";
+        version = "${version}";
+        sha256 = "15h8x398jwag80l9gf5q8r9pmpxgj5py8sh6m9ry9fwap65jsqpp";
+      };
+
+      beamDeps = [ file_system ];
+    };
+
     file_system = buildMix rec {
       name = "file_system";
       version = "0.2.10";
