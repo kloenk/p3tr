@@ -38,6 +38,9 @@ defmodule P3trUmbrella.MixProject do
       p3tr: [
         applications: [
           p3tr: :permanent
+        ],
+        config_providers: [
+          {P3tr.Config.ReleaseRuntimeProvider, []}
         ]
       ]
     ]
