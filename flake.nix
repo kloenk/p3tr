@@ -57,6 +57,11 @@
 
       legacyPackages = forAllSystems (system: nixpkgsFor.${system});
 
+      nixosModules = {
+        p3tr = import ./nix/p3tr.nix;
+        default = self.nixosModules.p3tr;
+      };
+
       devShells = forAllSystems (system:
         let pkgs = nixpkgsFor.${system};
         in {
